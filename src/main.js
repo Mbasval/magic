@@ -1,6 +1,9 @@
 const canvas = document.querySelector("#scene");
 const ctx = canvas.getContext("2d", { alpha: false });
 const music = document.querySelector("#bg-music");
+let musicStarted = false;
+let musicSourceTried = 0;
+const MUSIC_SOURCES = ["./magnific-litang.mp3", "/magnific-litang.mp3"];
 
 const TAU = Math.PI * 2;
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -637,9 +640,28 @@ function setPointer(x, y) {
 }
 
 function tryStartMusic() {
-  if (!music) return;
+  if (!music || musicStarted) return;
+  if (!music.getAttribute("src")) {
+    music.setAttribute("src", MUSIC_SOURCES[musicSourceTried]);
+    music.load();
+  }
   music.volume = 0.35;
-  music.play().catch(() => {});
+  music.play()
+    .then(() => {
+      musicStarted = true;
+    })
+    .catch(() => {});
+}
+
+if (music) {
+  music.addEventListener("error", () => {
+    if (musicSourceTried < MUSIC_SOURCES.length - 1) {
+      musicSourceTried += 1;
+      music.setAttribute("src", MUSIC_SOURCES[musicSourceTried]);
+      music.load();
+      tryStartMusic();
+    }
+  });
 }
 
 window.addEventListener("resize", resize, { passive: true });
@@ -648,7 +670,9 @@ window.addEventListener("pointerdown", (event) => {
   setPointer(event.clientX, event.clientY);
   tryStartMusic();
 }, { passive: true });
-window.addEventListener("keydown", tryStartMusic, { once: true });
+window.addEventListener("click", tryStartMusic, { passive: true });
+window.addEventListener("touchstart", tryStartMusic, { passive: true });
+window.addEventListener("keydown", tryStartMusic);
 window.addEventListener("pointerleave", () => {
   state.pointer.active = false;
 });
