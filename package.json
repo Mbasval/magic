@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "echo \"Static site ready for Vercel\"",
+    "build": "node build.js",
     "start": "node server.js",
     "dev": "node server.js"
   }
