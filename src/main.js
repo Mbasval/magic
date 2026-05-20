@@ -3,6 +3,8 @@ const ctx = canvas.getContext("2d", { alpha: false });
 
 const TAU = Math.PI * 2;
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const isCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
+const performanceMode = prefersReducedMotion || isCoarsePointer || window.innerWidth < 760;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -122,7 +124,8 @@ function rotatePoint(x, y, angle) {
 
 function spawnStars() {
   const random = mulberry32(1033);
-  const count = Math.floor(clamp((state.width * state.height) / 13000, 30, 115));
+  const density = performanceMode ? 23000 : 16000;
+  const count = Math.floor(clamp((state.width * state.height) / density, 24, performanceMode ? 56 : 86));
   state.stars = Array.from({ length: count }, (_, i) => ({
     x: random() * state.width,
     y: random() * state.height * 0.72,
@@ -201,7 +204,7 @@ function buildLandingSpots(index, capX, capY, capWidth, capHeight) {
 
 function buildFungusFacets(index) {
   const random = mulberry32(8100 + index * 73);
-  return Array.from({ length: 9 }, () => ({
+  return Array.from({ length: performanceMode ? 5 : 8 }, () => ({
     ax: randomRange(random, -0.5, 0.4),
     ay: randomRange(random, -0.5, 0.28),
     bx: randomRange(random, -0.25, 0.52),
@@ -214,7 +217,7 @@ function buildFungusFacets(index) {
 }
 
 function resize() {
-  state.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  state.dpr = Math.min(window.devicePixelRatio || 1, performanceMode ? 1 : 1.35);
   state.width = window.innerWidth;
   state.height = window.innerHeight;
   canvas.width = Math.floor(state.width * state.dpr);
@@ -259,8 +262,10 @@ class Particle {
     const alpha = clamp(this.life / this.maxLife, 0, 1);
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    ctx.shadowColor = colorString(this.color, alpha);
-    ctx.shadowBlur = 16 * this.glow;
+    if (!performanceMode) {
+      ctx.shadowColor = colorString(this.color, alpha);
+      ctx.shadowBlur = 12 * this.glow;
+    }
     ctx.fillStyle = colorString(this.color, alpha * 0.55);
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.size * alpha, 0, TAU);
@@ -360,7 +365,7 @@ class Butterfly {
     this.color = mixColor(this.color, desiredColor, clamp(dt * (active || state.ascended ? 2.8 : 0.55), 0, 1));
     this.trailClock -= dt;
     if (this.trailClock <= 0) {
-      this.trailClock = prefersReducedMotion ? 0.26 : 0.07 + (this.index % 4) * 0.012;
+      this.trailClock = performanceMode ? 0.18 : 0.09 + (this.index % 4) * 0.018;
       emitParticle(
         this.x - this.vx * 0.035,
         this.y - this.vy * 0.035,
@@ -368,8 +373,8 @@ class Butterfly {
         -this.vy * 0.035 + Math.cos(this.phase) * 7,
         this.color,
         randomRange(Math.random, 0.8, 2.2),
-        randomRange(Math.random, 0.45, 0.95),
-        0.8
+        randomRange(Math.random, 0.38, performanceMode ? 0.62 : 0.9),
+        performanceMode ? 0.35 : 0.75
       );
     }
   }
@@ -388,8 +393,8 @@ class Butterfly {
     ctx.translate(this.x, this.y);
     ctx.rotate(angle);
     ctx.globalCompositeOperation = "lighter";
-    ctx.shadowColor = colorString(wingColor, 0.9);
-    ctx.shadowBlur = 16 + wingOpen * 8;
+    ctx.shadowColor = colorString(wingColor, 0.85);
+    ctx.shadowBlur = performanceMode ? 7 : 13 + wingOpen * 5;
 
     const leftWing = [
       { x: -size * 0.1, y: 0 },
@@ -412,7 +417,7 @@ class Butterfly {
     drawButterflyWing(leftLower, mixColor(wingColor, coreColor, 0.22), 0.62);
     ctx.scale(1, -1);
 
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = performanceMode ? 0 : 6;
     ctx.fillStyle = colorString(coreColor, 0.94);
     ctx.beginPath();
     ctx.ellipse(0, 0, bodyLength * 0.35, size * 0.13, 0, 0, TAU);
@@ -490,8 +495,8 @@ class Bird {
     if (this.x > state.width + 60) this.x = -60;
     this.y = clamp(this.y, 18, state.floorTop - 35);
 
-    if (Math.random() < dt * 3.5) {
-      emitParticle(this.x, this.y, -this.vx * 0.02, -this.vy * 0.02, this.color, 1.1, 0.75, 0.55);
+    if (!performanceMode && Math.random() < dt * 2.2) {
+      emitParticle(this.x, this.y, -this.vx * 0.02, -this.vy * 0.02, this.color, 1.1, 0.65, 0.45);
     }
   }
 
@@ -504,7 +509,7 @@ class Bird {
     ctx.rotate(angle);
     ctx.globalCompositeOperation = "lighter";
     ctx.shadowColor = colorString(this.color, 0.8);
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = performanceMode ? 4 : 10;
     ctx.strokeStyle = colorString(this.color, 0.76);
     ctx.lineWidth = Math.max(1.4, size * 0.14);
     ctx.lineCap = "round";
@@ -524,7 +529,7 @@ class Bird {
 }
 
 function emitParticle(x, y, vx, vy, color, size, life, glow) {
-  if (state.particles.length > (prefersReducedMotion ? 80 : 260)) return;
+  if (state.particles.length > (performanceMode ? 70 : 150)) return;
   state.particles.push(new Particle(x, y, vx, vy, color, size, life, glow));
 }
 
@@ -540,12 +545,12 @@ function triggerAscension() {
   state.ascended = true;
   state.ascensionPulse = 1;
   spawnButterflies(7, true);
-  for (let i = 0; i < 9; i += 1) {
+  for (let i = 0; i < (performanceMode ? 5 : 8); i += 1) {
     state.birds.push(new Bird(i));
   }
   for (const fungus of state.fungi) {
     const baseColor = shadeFromPalette(fungus.palette, fungus.id, PALETTES.length, 8);
-    for (let i = 0; i < 24; i += 1) {
+    for (let i = 0; i < (performanceMode ? 7 : 14); i += 1) {
       const angle = Math.random() * TAU;
       const speed = randomRange(Math.random, 20, 92);
       emitParticle(
@@ -616,7 +621,7 @@ function update(dt) {
     if (particle.life <= 0) state.particles.splice(i, 1);
   }
 
-  if (state.activeFungus && Math.random() < dt * 13) {
+  if (state.activeFungus && Math.random() < dt * (performanceMode ? 4 : 8)) {
     const fungus = state.activeFungus;
     const color = shadeFromPalette(fungus.palette, Math.floor(Math.random() * 7), 7, 7);
     emitParticle(
@@ -654,7 +659,7 @@ function drawBackground() {
   ctx.fillRect(0, 0, state.width, state.height);
 
   for (const star of state.stars) {
-    const alpha = 0.15 + Math.sin(state.time * star.twinkle + star.phase) * 0.08;
+    const alpha = performanceMode ? 0.16 : 0.15 + Math.sin(state.time * star.twinkle + star.phase) * 0.08;
     ctx.fillStyle = colorString(star.color, alpha);
     ctx.beginPath();
     ctx.arc(star.x, star.y, star.r, 0, TAU);
@@ -701,7 +706,7 @@ function drawFloor() {
   ctx.closePath();
   ctx.fill();
 
-  for (let i = 0; i < 32; i += 1) {
+  for (let i = 0; i < (performanceMode ? 14 : 28); i += 1) {
     const x = random() * state.width;
     const y = top + random() * h;
     const w = randomRange(random, 18, 86);
@@ -810,7 +815,7 @@ function drawFungus(fungus) {
   ctx.save();
   ctx.globalCompositeOperation = "source-over";
 
-  if (active || infused) {
+  if ((active || infused) && (!performanceMode || active)) {
     ctx.globalCompositeOperation = "lighter";
     const aura = ctx.createRadialGradient(
       fungus.capX,
@@ -864,14 +869,15 @@ function drawFungus(fungus) {
   capGradient.addColorStop(1, colorString(mixColor(muted, { r: 0, g: 0, b: 0 }, 0.35), 0.96));
   ctx.fillStyle = capGradient;
   ctx.shadowColor = colorString(base, active ? 0.72 : 0.32);
-  ctx.shadowBlur = active ? 18 : 8;
+  ctx.shadowBlur = performanceMode ? (active ? 7 : 0) : active ? 14 : 5;
   ctx.fill();
   ctx.shadowBlur = 0;
 
   ctx.save();
   polygon(ctx, cap);
   ctx.clip();
-  for (const facet of fungus.facets) {
+  const facets = performanceMode && !active ? fungus.facets.slice(0, 3) : fungus.facets;
+  for (const facet of facets) {
     const points = [
       {
         x: fungus.capX + facet.ax * fungus.capWidth,
