@@ -1,0 +1,11 @@
+{
+  "name": "chromatic-mycelium",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo \"Static site ready for Vercel\"",
+    "start": "node server.js",
+    "dev": "node server.js"
+  }
+}

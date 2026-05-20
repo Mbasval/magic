@@ -1,0 +1,56 @@
+:root {
+  color-scheme: dark;
+  background: #000;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+main {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background: #000;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+main {
+  position: relative;
+  min-height: 100svh;
+  cursor: none;
+  touch-action: none;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+.vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 40%, transparent 0 42%, rgba(0, 0, 0, 0.36) 78%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0) 62%, rgba(0, 0, 0, 0.62) 100%);
+  mix-blend-mode: normal;
+}
+
+noscript {
+  position: fixed;
+  inset: 1rem auto auto 1rem;
+  color: white;
+  font-size: 0.875rem;
+  z-index: 2;
+}
